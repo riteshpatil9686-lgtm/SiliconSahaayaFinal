@@ -1,0 +1,83 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: silicon_sahaaya_db
+    environment:
+      POSTGRES_DB: silicon_sahaaya
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/seed.sql:/docker-entrypoint-initdb.d/seed.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: silicon_sahaaya_backend
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=silicon_sahaaya
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - ML_API_URL=http://ml-api:8001
+      - R_API_URL=http://r-api:8000
+      - JWT_SECRET=SiliconSahaaya_JWT_Secret_2026
+      - FRONTEND_URL=http://localhost:3000
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/uploads:/app/uploads
+
+  ml-api:
+    build:
+      context: ./ml-models
+      dockerfile: Dockerfile
+    container_name: silicon_sahaaya_ml
+    ports:
+      - "8001:8001"
+
+  r-api:
+    build:
+      context: ./r-api
+      dockerfile: Dockerfile
+    container_name: silicon_sahaaya_r
+    environment:
+      - DB_HOST=postgres
+      - DB_NAME=silicon_sahaaya
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: silicon_sahaaya_frontend
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

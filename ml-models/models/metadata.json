@@ -1,0 +1,41 @@
+{
+  "models": {
+    "classifier": {
+      "type": "TF-IDF + LogisticRegression",
+      "accuracy": 1.0,
+      "classes": [
+        "Roads",
+        "Garbage",
+        "Water",
+        "Streetlight",
+        "Sewage",
+        "Parks",
+        "Noise"
+      ]
+    },
+    "priority_scorer": {
+      "type": "XGBoost Regressor",
+      "r2": 0.8145
+    },
+    "resolution_predictor": {
+      "type": "XGBoost Regressor",
+      "r2": 0.5693
+    }
+  },
+  "training_samples": 20000,
+  "categories": [
+    "Roads",
+    "Garbage",
+    "Water",
+    "Streetlight",
+    "Sewage",
+    "Parks",
+    "Noise"
+  ],
+  "urgencies": [
+    "low",
+    "medium",
+    "high",
+    "critical"
+  ]
+}
