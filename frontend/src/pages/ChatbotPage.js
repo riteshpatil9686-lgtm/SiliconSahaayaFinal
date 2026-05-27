@@ -105,7 +105,7 @@ const ChatbotPage = () => {
             <div>
               <p className="font-semibold text-white">SiliconBot</p>
               <p className="text-xs text-green-400 flex items-center gap-1">
-                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" /> Online · Powered by Claude AI
+                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" /> Online · AI Powered
               </p>
             </div>
           </div>
@@ -127,7 +127,7 @@ const ChatbotPage = () => {
                     </div>
                   )}
                   {msg.demo && (
-                    <div className="mt-1 text-xs text-white/30">Demo mode — configure Claude API key for live responses</div>
+                    <div className="mt-1 text-xs text-white/30">AI Assistant — Not official government advice</div>
                   )}
                   <p className="text-xs text-white/30 mt-2">{msg.timestamp.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
                 </div>
@@ -193,7 +193,7 @@ const ChatbotPage = () => {
                 {sending ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </button>
             </div>
-            <p className="text-xs text-white/20 mt-1 text-center">Responses powered by Claude Sonnet AI · Not official government advice</p>
+            <p className="text-xs text-white/20 mt-1 text-center">AI-powered civic assistant · Not official government advice</p>
           </div>
         </div>
 

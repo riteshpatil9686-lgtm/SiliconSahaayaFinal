@@ -4,7 +4,7 @@ const { authenticate, authorize } = require('../middleware/auth');
 const { query } = require('../db');
 const nodemailer = require('nodemailer');
 
-const createTransporter = () => nodemailer.createTransporter({
+const createTransporter = () => nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp.gmail.com',
   port: parseInt(process.env.EMAIL_PORT) || 587,
   secure: false,
@@ -13,9 +13,20 @@ const createTransporter = () => nodemailer.createTransporter({
 });
 
 // POST /api/notifications/send-email
-router.post('/send-email', authenticate, authorize('admin'), async (req, res) => {
+router.post('/send-email', authenticate, async (req, res) => {
   try {
     const { to_email, complaint_id, subject, body } = req.body;
+    
+    // Check permission: either user is admin, or they are citizen updating their own complaint
+    if (req.user.role !== 'admin') {
+      if (!complaint_id) {
+        return res.status(403).json({ success: false, message: 'Unauthorized' });
+      }
+      const ownerCheck = await query('SELECT user_id FROM complaints WHERE id = $1 OR complaint_id = $1', [complaint_id]);
+      if (!ownerCheck.rows.length || ownerCheck.rows[0].user_id !== req.user.id) {
+        return res.status(403).json({ success: false, message: 'Unauthorized: You can only send updates for your own complaints' });
+      }
+    }
     
     const transporter = createTransporter();
     

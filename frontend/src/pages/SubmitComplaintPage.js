@@ -29,7 +29,7 @@ const STEPS = [
 
 const SubmitComplaintPage = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, updateProfile } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [mlLoading, setMlLoading] = useState(false);
@@ -66,7 +66,7 @@ const SubmitComplaintPage = () => {
       const res = await api.post('/ml/predict', {
         title: title || form.title,
         description,
-        category: cat || form.category || 'Roads',
+        category: cat || form.category || '',   // empty = let backend detect from text
         urgency: urg || form.urgency
       });
       if (res.data.success) {
@@ -101,16 +101,18 @@ const SubmitComplaintPage = () => {
     }
   }, [form.description, form.title, form.category, form.urgency]);
 
-  // Auto-trigger ML analysis with debounce when description changes
+  // Auto-trigger ML analysis with debounce when description or title changes
+  // Triggers 1.2s after user STOPS typing — fully automatic, no manual button
   useEffect(() => {
     if (mlDebounceRef.current) clearTimeout(mlDebounceRef.current);
-    if (form.description && form.description.length >= 20) {
+    const text = form.description;
+    if (text && text.length >= 15) {
       mlDebounceRef.current = setTimeout(() => {
         runMLPrediction(form.description, form.title, form.category, form.urgency);
-      }, 700);
+      }, 1200);
     }
     return () => { if (mlDebounceRef.current) clearTimeout(mlDebounceRef.current); };
-  }, [form.description]);
+  }, [form.description, form.title]);
 
   // Camera functions
   const openCamera = async () => {
@@ -275,36 +277,105 @@ const SubmitComplaintPage = () => {
   if (step === 5 && submittedId) {
     return (
       <div className="min-h-screen pt-24 pb-10 flex items-center justify-center px-4">
-        <div className="max-w-lg w-full text-center glass rounded-2xl p-10 border border-green-500/30">
-          <div className="w-20 h-20 rounded-full bg-green-500/20 border-2 border-green-500 flex items-center justify-center mx-auto mb-6">
-            <CheckCircle className="w-10 h-10 text-green-400" />
-          </div>
-          <h1 className="text-2xl font-display font-bold text-white mb-2">Complaint Submitted!</h1>
-          <p className="text-white/60 mb-6">Your complaint has been submitted and is being analyzed by our AI system.</p>
-          <div className="bg-forest-950/50 rounded-xl p-5 mb-6 border border-saffron-500/20">
-            <p className="text-sm text-white/50 mb-1">Your Complaint ID</p>
-            <p className="text-3xl font-display font-bold gradient-text">{submittedId}</p>
-            <p className="text-xs text-white/40 mt-1">Save this ID to track your complaint</p>
-          </div>
-          {mlPrediction && (
-            <div className="grid grid-cols-2 gap-3 mb-6 text-left">
-              <div className="glass rounded-lg p-3">
-                <p className="text-xs text-white/40">Priority Score</p>
-                <p className="text-xl font-bold text-saffron-400">{mlPrediction.priority_score}/100</p>
-              </div>
-              <div className="glass rounded-lg p-3">
-                <p className="text-xs text-white/40">Est. Resolution</p>
-                <p className="text-xl font-bold text-blue-400">{mlPrediction.predicted_days} days</p>
-              </div>
+        <div className="max-w-lg w-full glass rounded-2xl border border-green-500/30 overflow-hidden">
+          {/* Success header */}
+          <div className="bg-gradient-to-br from-green-900/40 to-forest-900/60 px-8 py-8 text-center border-b border-green-500/20">
+            <div className="w-20 h-20 rounded-full bg-green-500/20 border-2 border-green-500 flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-10 h-10 text-green-400" />
             </div>
-          )}
-          <div className="flex gap-3">
-            <button onClick={() => navigate(`/track?id=${submittedId}`)} className="btn-primary flex-1">
-              <Search className="w-4 h-4" /> Track Complaint
-            </button>
-            <button onClick={() => { setStep(1); setSubmittedId(null); setForm({ title: '', description: '', category: '', subcategory: '', urgency: 'medium', address: '', landmark: '', lat: '', lng: '', pincode: '', original_description: '' }); setImages([]); }} className="btn-secondary flex-1">
-              Submit Another
-            </button>
+            <h1 className="text-2xl font-display font-bold text-white mb-1">Complaint Submitted!</h1>
+            <p className="text-white/60 text-sm">Your complaint is being analyzed by our AI system</p>
+          </div>
+          <div className="p-8">
+            {/* Complaint ID */}
+            <div className="bg-forest-950/60 rounded-xl p-5 mb-4 border border-saffron-500/20 text-center">
+              <p className="text-xs text-white/40 uppercase tracking-widest mb-1">Your Complaint ID</p>
+              <p className="text-3xl font-display font-bold gradient-text tracking-wide">{submittedId}</p>
+            </div>
+            {/* Email notice */}
+            {user?.email ? (
+              <div className="flex items-start gap-3 p-3 bg-blue-900/20 border border-blue-700/30 rounded-lg mb-5 animate-fade-in">
+                <span className="text-lg mt-0.5">✉️</span>
+                <div>
+                  <p className="text-sm text-blue-300 font-medium">Confirmation email sent!</p>
+                  <p className="text-xs text-blue-200/60 mt-0.5 text-left">Check <strong className="text-white">{user.email}</strong> for a tracking link to monitor your complaint at every stage.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-start gap-3 p-3 bg-amber-900/20 border border-amber-700/30 rounded-lg mb-5 animate-fade-in">
+                <span className="text-lg mt-0.5">⚠️</span>
+                <div className="flex-1 text-left">
+                  <p className="text-sm text-amber-300 font-medium">No email configured</p>
+                  <p className="text-xs text-amber-200/60 mt-0.5 mb-2">You won't receive email notifications. Add an email to get status updates:</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      id="success-email-input"
+                      placeholder="Enter email address"
+                      className="input-field py-1 px-3 text-xs bg-forest-900/60 flex-1"
+                    />
+                    <button
+                      onClick={async () => {
+                        const input = document.getElementById('success-email-input');
+                        const emailVal = input?.value.trim();
+                        if (emailVal && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+                          try {
+                            await updateProfile({ email: emailVal });
+                            toast.success('Email updated!');
+                            await api.post(`/notifications/send-email`, {
+                              to_email: emailVal,
+                              complaint_id: submittedId,
+                              subject: `[${submittedId}] Complaint Submitted — SiliconSahaaya`,
+                              body: `Your complaint ${submittedId} has been successfully submitted and is being analyzed by our AI system. You can track your complaint status on the dashboard.`
+                            }).catch(() => {});
+                          } catch {
+                            toast.error('Failed to update email');
+                          }
+                        } else {
+                          toast.error('Please enter a valid email address');
+                        }
+                      }}
+                      className="btn-primary text-xs py-1 px-3"
+                    >
+                      Add & Send
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* AI summary */}
+            {mlPrediction && (
+              <div className="grid grid-cols-2 gap-3 mb-5">
+                <div className="glass rounded-lg p-3 text-center">
+                  <p className="text-xs text-white/40 mb-1">Priority Score</p>
+                  <p className="text-xl font-bold text-saffron-400">{mlPrediction.priority_score}/100</p>
+                </div>
+                <div className="glass rounded-lg p-3 text-center">
+                  <p className="text-xs text-white/40 mb-1">Est. Resolution</p>
+                  <p className="text-xl font-bold text-blue-400">{mlPrediction.predicted_days} days</p>
+                </div>
+                {mlPrediction.category && (
+                  <div className="glass rounded-lg p-3 text-center">
+                    <p className="text-xs text-white/40 mb-1">Category</p>
+                    <p className="text-sm font-bold text-green-400">{mlPrediction.category}</p>
+                  </div>
+                )}
+                {mlPrediction.urgency && (
+                  <div className="glass rounded-lg p-3 text-center">
+                    <p className="text-xs text-white/40 mb-1">Urgency</p>
+                    <p className="text-sm font-bold text-orange-400 capitalize">{mlPrediction.urgency}</p>
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button onClick={() => navigate(`/track?id=${submittedId}`)} className="btn-primary flex-1">
+                <Search className="w-4 h-4" /> Track Complaint
+              </button>
+              <button onClick={() => { setStep(1); setSubmittedId(null); setMlPrediction(null); setForm({ title: '', description: '', category: '', subcategory: '', urgency: 'medium', address: '', landmark: '', lat: '', lng: '', pincode: '', original_description: '' }); setImages([]); }} className="btn-secondary flex-1">
+                Submit Another
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -388,28 +459,122 @@ const SubmitComplaintPage = () => {
                 </div>
               </div>
 
-              {/* ML Prediction Box */}
-              {mlPrediction && (
-                <div className="bg-forest-900/50 rounded-xl p-4 border border-saffron-500/20 animate-fade-in">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Zap className="w-4 h-4 text-saffron-400" />
-                    <span className="text-sm font-medium text-saffron-400">AI Analysis Result</span>
-                    {mlPrediction.source === 'fallback' && <span className="text-xs text-white/30">(offline)</span>}
+              {/* AI Analysis Panel — all 6 fields, auto-triggered */}
+              {(mlLoading || mlPrediction) && (
+                <div className="bg-forest-900/60 rounded-xl border border-saffron-500/20 overflow-hidden animate-fade-in">
+                  {/* Panel header */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-forest-700/40">
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-saffron-400" />
+                      <span className="text-sm font-semibold text-saffron-400">
+                        {mlLoading ? 'AI Analyzing...' : 'AI Analysis Complete'}
+                      </span>
+                    </div>
+                    {mlLoading && <Loader className="w-3.5 h-3.5 text-saffron-400 animate-spin" />}
+                    {mlPrediction && !mlLoading && (
+                      <span className="text-xs text-green-400 flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" /> Done
+                      </span>
+                    )}
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-saffron-400">{mlPrediction.priority_score}</p>
-                      <p className="text-xs text-white/40">Priority Score</p>
+
+                  {mlPrediction && !mlLoading && (() => {
+                    const urgencyColors = { critical: 'text-red-400 bg-red-500/20', high: 'text-orange-400 bg-orange-500/20', medium: 'text-yellow-400 bg-yellow-500/20', low: 'text-green-400 bg-green-500/20' };
+                    const sentimentEmoji = { negative: '😤', neutral: '😐', positive: '😊' };
+                    const sentimentLabel = mlPrediction.sentiment_label || (mlPrediction.sentiment_score < -0.05 ? 'negative' : mlPrediction.sentiment_score > 0.05 ? 'positive' : 'neutral');
+                    const urg = mlPrediction.urgency || form.urgency || 'medium';
+                    const urgColor = urgencyColors[urg] || urgencyColors.medium;
+                    const lang = mlPrediction.detected_language || { label: 'English', code: 'en' };
+                    const priorityPct = Math.min(100, mlPrediction.priority_score || 0);
+                    const priorityColor = priorityPct >= 75 ? '#ef4444' : priorityPct >= 50 ? '#f97316' : '#eab308';
+
+                    return (
+                      <div className="divide-y divide-forest-700/30">
+                        {/* Row 1: Detected Language */}
+                        <div className="flex items-center justify-between px-4 py-2.5">
+                          <span className="text-sm text-white/60 flex items-center gap-2">
+                            <Globe className="w-3.5 h-3.5" /> Detected Language
+                          </span>
+                          <span className="text-xs font-bold px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 uppercase tracking-wide">
+                            {lang.label} {lang.code === 'kn' ? '🇮🇳' : lang.code === 'hi' ? '🇮🇳' : '🇬🇧'}
+                          </span>
+                        </div>
+
+                        {/* Row 2: Predicted Category */}
+                        <div className="flex items-center justify-between px-4 py-2.5">
+                          <span className="text-sm text-white/60 flex items-center gap-2">
+                            🏷️ Predicted Category
+                          </span>
+                          <span className="text-xs font-bold px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 uppercase tracking-wide">
+                            {mlPrediction.category || form.category || 'Roads'}
+                          </span>
+                        </div>
+
+                        {/* Row 3: Urgency Level */}
+                        <div className="flex items-center justify-between px-4 py-2.5">
+                          <span className="text-sm text-white/60 flex items-center gap-2">
+                            🚨 Urgency Level
+                          </span>
+                          <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide ${urgColor}`}>
+                            ◆ {urg.toUpperCase()}
+                          </span>
+                        </div>
+
+                        {/* Row 4: Sentiment */}
+                        <div className="flex items-center justify-between px-4 py-2.5">
+                          <span className="text-sm text-white/60 flex items-center gap-2">
+                            😊 Sentiment
+                          </span>
+                          <span className="text-sm font-medium text-white/80">
+                            {sentimentEmoji[sentimentLabel] || '😐'} {sentimentLabel.charAt(0).toUpperCase() + sentimentLabel.slice(1)}
+                            {mlPrediction.sentiment_score !== undefined && (
+                              <span className="text-white/40 text-xs ml-1">({mlPrediction.sentiment_score.toFixed(2)})</span>
+                            )}
+                          </span>
+                        </div>
+
+                        {/* Row 5: Predicted ETA */}
+                        <div className="flex items-center justify-between px-4 py-2.5">
+                          <span className="text-sm text-white/60 flex items-center gap-2">
+                            🕐 Predicted ETA
+                          </span>
+                          <span className="text-xs font-bold px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 uppercase tracking-wide">
+                            {mlPrediction.predicted_days}-{mlPrediction.predicted_days + 2} DAYS
+                          </span>
+                        </div>
+
+                        {/* Row 6: Priority Score + bar */}
+                        <div className="px-4 py-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm text-white/60 flex items-center gap-2">
+                              🎯 Priority Score
+                            </span>
+                            <span className="text-xl font-bold" style={{ color: priorityColor }}>
+                              {mlPrediction.priority_score}/100
+                            </span>
+                          </div>
+                          <div className="h-2 bg-forest-800/60 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-700"
+                              style={{ width: `${priorityPct}%`, background: `linear-gradient(90deg, #eab308, ${priorityColor})` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Skeleton while loading */}
+                  {mlLoading && (
+                    <div className="divide-y divide-forest-700/30">
+                      {[...Array(6)].map((_, i) => (
+                        <div key={i} className="flex items-center justify-between px-4 py-3">
+                          <div className="skeleton h-3 w-28 rounded" />
+                          <div className="skeleton h-5 w-20 rounded-full" />
+                        </div>
+                      ))}
                     </div>
-                    <div className="text-center">
-                      <p className="text-lg font-bold text-green-400">{mlPrediction.category}</p>
-                      <p className="text-xs text-white/40">Detected Category</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-lg font-bold text-blue-400">{mlPrediction.predicted_days}d</p>
-                      <p className="text-xs text-white/40">Est. Resolution</p>
-                    </div>
-                  </div>
+                  )}
                 </div>
               )}
 
@@ -572,6 +737,41 @@ const SubmitComplaintPage = () => {
                     <div><p className="text-2xl font-bold text-saffron-400">{mlPrediction.priority_score}</p><p className="text-xs text-white/40">Priority</p></div>
                     <div><p className="text-lg font-bold text-green-400">{mlPrediction.confidence ? Math.round(mlPrediction.confidence * 100) + '%' : '75%'}</p><p className="text-xs text-white/40">Confidence</p></div>
                     <div><p className="text-lg font-bold text-blue-400">{mlPrediction.predicted_days}d</p><p className="text-xs text-white/40">ETA</p></div>
+                  </div>
+                </div>
+              )}
+
+              {isAuthenticated && !user?.email && (
+                <div className="bg-forest-900/40 rounded-xl p-4 border border-saffron-500/20 text-left">
+                  <label className="block text-sm font-medium text-white/70 mb-1.5">Receive Email Notifications?</label>
+                  <p className="text-xs text-white/40 mb-2">We will notify you about the status of this complaint via email.</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      id="review-email-input"
+                      placeholder="e.g. name@example.com"
+                      className="input-field py-2 px-3 text-sm bg-forest-950/60"
+                    />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const emailInput = document.getElementById('review-email-input');
+                        const emailVal = emailInput?.value.trim();
+                        if (emailVal && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+                          try {
+                            await updateProfile({ email: emailVal });
+                            toast.success('Email added to your profile!');
+                          } catch {
+                            toast.error('Failed to update email');
+                          }
+                        } else {
+                          toast.error('Please enter a valid email address');
+                        }
+                      }}
+                      className="btn-primary py-2 px-4 text-sm shrink-0"
+                    >
+                      Save Email
+                    </button>
                   </div>
                 </div>
               )}

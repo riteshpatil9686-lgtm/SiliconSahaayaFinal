@@ -73,7 +73,7 @@ const HomePage = () => {
     { icon: FileText, title: 'Smart Complaint Submission', desc: 'AI auto-detects category and urgency from your description. Step-by-step 5-stage wizard.', to: '/submit', color: 'text-saffron-400' },
     { icon: Camera, title: 'IoT Photo Analysis', desc: 'Upload a photo — YOLOv8 AI detects garbage, potholes, broken lights automatically.', to: '/submit', color: 'text-green-400' },
     { icon: Search, title: 'Real-time Tracking', desc: 'Full timeline from submission to resolution. Before/after photos, citizen verification.', to: '/track', color: 'text-blue-400' },
-    { icon: Bot, title: 'AI Chatbot (Claude)', desc: 'Natural language assistant powered by Claude. Ask anything about your complaint.', to: '/chatbot', color: 'text-purple-400' },
+    { icon: Bot, title: 'AI Assistant', desc: 'Natural language assistant to help you submit complaints, track status, and get department info.', to: '/chatbot', color: 'text-purple-400' },
     { icon: Map, title: 'Interactive Heatmap', desc: 'Live Leaflet map with color-coded complaint pins and hotspot detection.', to: '/#map', color: 'text-red-400' },
     { icon: BarChart3, title: 'R Analytics Engine', desc: 'ggplot2 charts: weekly trends, category breakdown, department performance, resolution histograms.', to: '/admin', color: 'text-yellow-400' },
     { icon: Shield, title: 'ML Priority Scoring', desc: 'XGBoost model scores complaint urgency 0-100. ETA prediction for resolution time.', to: '/admin', color: 'text-indigo-400' },
@@ -119,7 +119,7 @@ const HomePage = () => {
           </h1>
 
           <p className="text-xl text-white/70 max-w-3xl mx-auto mb-10 leading-relaxed animate-slide-up" style={{ animationDelay: '0.1s' }}>
-            SiliconSahaaya brings Bengaluru's civic grievance system into the AI era. Submit complaints, track resolutions in real-time, and help make our city cleaner — powered by YOLOv8, Claude AI, and XGBoost ML.
+            SiliconSahaaya brings Bengaluru's civic grievance system into the AI era. Submit complaints, track resolutions in real-time, and help make our city cleaner — powered by YOLOv8, XGBoost ML, and real-time AI analysis.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16 animate-slide-up" style={{ animationDelay: '0.2s' }}>

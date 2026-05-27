@@ -9,10 +9,15 @@ const http = require('http');
 const { Server } = require('socket.io');
 require('dotenv').config();
 
+console.log("EMAIL_USER:", process.env.EMAIL_USER);
+console.log(
+  "EMAIL_PASS:",
+  process.env.EMAIL_PASS ? "Password loaded" : "No password"
+);
 const app = express();
 const server = http.createServer(app);
 
-// Socket.io for real-time updates
+// Socket.io for real-time updates  
 const io = new Server(server, {
   cors: {
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
@@ -43,8 +48,8 @@ app.use('/uploads', express.static(path.resolve(uploadDir)));
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     service: 'SiliconSahaaya Backend',
     timestamp: new Date().toISOString(),
     version: '1.0.0'
@@ -67,12 +72,12 @@ app.use('/api/ml', require('./routes/ml'));
 // Socket.io connection handling
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
-  
+
   socket.on('join-room', (room) => {
     socket.join(room);
     console.log(`Socket ${socket.id} joined room: ${room}`);
   });
-  
+
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
   });

@@ -15,11 +15,11 @@
     },
     "priority_scorer": {
       "type": "XGBoost Regressor",
-      "r2": 0.8145
+      "r2": 0.8071
     },
     "resolution_predictor": {
       "type": "XGBoost Regressor",
-      "r2": 0.5693
+      "r2": 0.5751
     }
   },
   "training_samples": 20000,

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../db');
 const { authenticate, authorize } = require('../middleware/auth');
+const { sendStatusUpdateEmail } = require('../utils/notifications');
 const axios = require('axios');
 const multer = require('multer');
 const path = require('path');
@@ -144,7 +145,10 @@ router.put('/complaints/:id/assign', authenticate, authorize('admin'), async (re
       'INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_values) VALUES ($1,$2,$3,$4,$5)',
       [req.user.id, 'ASSIGN_COMPLAINT', 'complaint', id, JSON.stringify({ department_id, officer_id })]
     );
-    
+
+    // Send email notification to citizen
+    sendStatusUpdateEmail(id, 'assigned').catch(console.error);
+
     res.json({ success: true, message: 'Complaint assigned successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to assign complaint' });
@@ -195,7 +199,10 @@ router.put('/complaints/:id/resolve', authenticate, authorize('admin', 'field_of
         [c.user_id]
       );
     }
-    
+
+    // Send email notification to citizen
+    sendStatusUpdateEmail(id, 'resolved').catch(console.error);
+
     res.json({ success: true, message: 'Complaint resolved successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to resolve complaint' });
@@ -217,7 +224,10 @@ router.put('/complaints/:id/escalate', authenticate, authorize('admin'), async (
       'INSERT INTO complaint_timeline (complaint_id, status, description, performed_by, role) VALUES ($1,$2,$3,$4,$5)',
       [id, 'escalated', reason || 'Escalated by admin', req.user.id, 'admin']
     );
-    
+
+    // Send email notification to citizen
+    sendStatusUpdateEmail(id, 'escalated').catch(console.error);
+
     res.json({ success: true, message: 'Complaint escalated' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to escalate' });
